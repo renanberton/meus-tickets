@@ -1,0 +1,69 @@
+# =========================
+# Java / Spring Boot
+# =========================
+
+# Compilação
+target/
+build/
+out/
+*.class
+
+# Logs
+*.log
+logs/
+
+# Arquivos temporários
+*.tmp
+*.swp
+*.swo
+*~
+
+# =========================
+# IDEs
+# =========================
+
+# IntelliJ
+.idea/
+*.iml
+
+# Eclipse
+.project
+.classpath
+.settings/
+
+# VS Code
+.vscode/
+
+# =========================
+# Maven / Gradle
+# =========================
+
+# Maven wrapper (opcional manter)
+.mvn/wrapper/maven-wrapper.jar
+
+# Gradle
+.gradle/
+
+# =========================
+# Config sensível
+# =========================
+
+# Arquivos locais (NUNCA subir)
+application-local.properties
+application-local.yml
+.env
+.env.*
+
+# Qualquer variação local
+application-*.local.properties
+application-*.local.yml
+
+# =========================
+# OS
+# =========================
+
+# Windows
+Thumbs.db
+
+# Mac
+.DS_Store
