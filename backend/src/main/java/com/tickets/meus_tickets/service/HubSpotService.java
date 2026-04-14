@@ -50,32 +50,67 @@ public class HubSpotService {
 		return null;
 	}
 
-	// 2. Buscar tickets associados a um contato
+	// 2. Buscar tickets associados a um contato (OTIMIZADO)
 	public List<Map<String, Object>> getContactTickets(String contactId) throws Exception {
-		String url = "https://api.hubapi.com/crm/v4/objects/contacts/" + contactId + "/associations/tickets";
+		// Passo 1: Buscar os IDs dos tickets associados
+		String assocUrl = "https://api.hubapi.com/crm/v4/objects/contacts/" + contactId + "/associations/tickets";
 
 		HttpHeaders headers = new HttpHeaders();
 		headers.set("Authorization", "Bearer " + hubspotToken);
 
 		HttpEntity<String> entity = new HttpEntity<>(headers);
-		ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, entity, String.class);
+		ResponseEntity<String> assocResponse = restTemplate.exchange(assocUrl, HttpMethod.GET, entity, String.class);
 
+		JsonNode assocRoot = objectMapper.readTree(assocResponse.getBody());
+		JsonNode results = assocRoot.get("results");
+
+		if (results == null || results.size() == 0) {
+			return new ArrayList<>();
+		}
+
+		// Passo 2: Coletar todos os IDs em uma lista
+		List<String> ticketIds = new ArrayList<>();
+		for (JsonNode assoc : results) {
+			ticketIds.add(assoc.get("toObjectId").asText());
+		}
+
+		// Passo 3: Buscar TODOS os tickets de uma vez (1 chamada apenas!)
+		String ticketsUrl = "https://api.hubapi.com/crm/v3/objects/tickets/batch/read?properties=subject,content,hs_pipeline_stage,hs_ticket_priority,createdate,hs_lastmodifieddate";
+
+		Map<String, Object> requestBody = Map.of("inputs", ticketIds.stream().map(id -> Map.of("id", id)).toList());
+		String bodyJson = objectMapper.writeValueAsString(requestBody);
+
+		HttpHeaders batchHeaders = new HttpHeaders();
+		batchHeaders.set("Authorization", "Bearer " + hubspotToken);
+		batchHeaders.setContentType(MediaType.APPLICATION_JSON);
+
+		HttpEntity<String> batchEntity = new HttpEntity<>(bodyJson, batchHeaders);
+		ResponseEntity<String> batchResponse = restTemplate.exchange(ticketsUrl, HttpMethod.POST, batchEntity,
+				String.class);
+
+		// Passo 4: Processar todos os tickets de uma vez
 		List<Map<String, Object>> tickets = new ArrayList<>();
-		JsonNode root = objectMapper.readTree(response.getBody());
-		JsonNode results = root.get("results");
+		JsonNode batchRoot = objectMapper.readTree(batchResponse.getBody());
+		JsonNode resultsBatch = batchRoot.get("results");
 
-		if (results != null) {
-			for (JsonNode assoc : results) {
-				// Pega o ID do ticket
-				String ticketId = assoc.get("toObjectId").asText();
-
-				// Busca detalhes do ticket
-				Map<String, Object> ticket = getTicketDetails(ticketId);
-				if (ticket != null) {
-					tickets.add(ticket);
-				}
+		if (resultsBatch != null) {
+			for (JsonNode ticketNode : resultsBatch) {
+				JsonNode properties = ticketNode.get("properties");
+				Map<String, Object> ticket = new HashMap<>();
+				ticket.put("id", ticketNode.get("id").asText());
+				ticket.put("subject", properties.has("subject") ? properties.get("subject").asText() : "Sem título");
+				ticket.put("content", properties.has("content") ? properties.get("content").asText() : "");
+				ticket.put("status",
+						properties.has("hs_pipeline_stage") ? properties.get("hs_pipeline_stage").asText() : "");
+				ticket.put("priority",
+						properties.has("hs_ticket_priority") ? properties.get("hs_ticket_priority").asText() : "");
+				ticket.put("createdDate", properties.has("createdate") ? properties.get("createdate").asText() : "");
+				ticket.put("lastModified",
+						properties.has("hs_lastmodifieddate") ? properties.get("hs_lastmodifieddate").asText() : "");
+				tickets.add(ticket);
 			}
 		}
+
 		return tickets;
 	}
 
@@ -171,11 +206,10 @@ public class HubSpotService {
 	}
 
 	// 5. Buscar tickets com paginação
+	// Método para paginação otimizada
 	public Map<String, Object> getContactTicketsPaginated(String contactId, int page, int size) throws Exception {
-		// Primeiro busca todos os tickets (ou podemos implementar cursor da HubSpot)
 		List<Map<String, Object>> allTickets = getContactTickets(contactId);
 
-		// Calcula paginação
 		int start = page * size;
 		int end = Math.min(start + size, allTickets.size());
 
@@ -184,7 +218,6 @@ public class HubSpotService {
 			paginatedTickets = allTickets.subList(start, end);
 		}
 
-		// Monta resposta com metadados
 		Map<String, Object> result = new HashMap<>();
 		result.put("tickets", paginatedTickets);
 		result.put("total", allTickets.size());
