@@ -12,7 +12,15 @@ interface Ticket {
   lastModified: string;
 }
 
-// Mudança aqui: Tipos de filtro
+interface PaginationData {
+  total: number;
+  page: number;
+  size: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrev: boolean;
+}
+
 type FilterType = 'todos' | 'alta' | 'media' | 'baixa' | 'aberto' | 'resolvidos';
 
 const priorityLabel: Record<string, string> = {
@@ -57,6 +65,111 @@ function getInitials(email: string) {
   return email?.slice(0, 2).toUpperCase() || 'ME';
 }
 
+// Componente de Paginação
+function Pagination({ currentPage, totalPages, totalItems, hasPrev, hasNext, onPageChange }: { 
+  currentPage: number;
+  totalPages: number;
+  totalItems: number;
+  hasPrev: boolean;
+  hasNext: boolean;
+  onPageChange: (page: number) => void;
+}) {
+  if (totalPages <= 1) return null;
+  
+  // Gerar array de páginas para exibir
+  const getPageNumbers = () => {
+    const pages: (number | string)[] = [];
+    const maxVisible = 5;
+    
+    if (totalPages <= maxVisible) {
+      for (let i = 0; i < totalPages; i++) pages.push(i);
+    } else {
+      if (currentPage < 3) {
+        for (let i = 0; i < 4; i++) pages.push(i);
+        pages.push('...');
+        pages.push(totalPages - 1);
+      } else if (currentPage > totalPages - 4) {
+        pages.push(0);
+        pages.push('...');
+        for (let i = totalPages - 4; i < totalPages; i++) pages.push(i);
+      } else {
+        pages.push(0);
+        pages.push('...');
+        for (let i = currentPage - 1; i <= currentPage + 1; i++) pages.push(i);
+        pages.push('...');
+        pages.push(totalPages - 1);
+      }
+    }
+    return pages;
+  };
+
+  return (
+    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 pt-4 border-t border-slate-200">
+      <div className="text-sm text-slate-700">
+        Mostrando <span className="font-medium text-slate-700">{currentPage * 10 + 1}</span> a{' '}
+        <span className="font-medium text-slate-700">
+          {Math.min((currentPage + 1) * 10, totalItems)}
+        </span>{' '}
+        de <span className="font-medium text-slate-700">{totalItems}</span> tickets
+      </div>
+      
+      <div className="flex items-center gap-1.5">
+        <button
+          onClick={() => onPageChange(currentPage - 1)}
+          disabled={!hasPrev}
+          className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-all flex items-center gap-1 ${
+            hasPrev 
+              ? 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300'
+              : 'bg-slate-50 border border-slate-100 text-slate-600 cursor-not-allowed'
+          }`}
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+          Anterior
+        </button>
+        
+        <div className="flex items-center gap-1">
+          {getPageNumbers().map((page, idx) => (
+            typeof page === 'number' ? (
+              <button
+                key={idx}
+                onClick={() => onPageChange(page)}
+                className={`w-8 h-8 text-sm font-medium rounded-lg transition-all ${
+                  currentPage === page
+                    ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-200'
+                    : 'text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                {page + 1}
+              </button>
+            ) : (
+              <span key={idx} className="w-8 h-8 text-center text-slate-400">
+                {page}
+              </span>
+            )
+          ))}
+        </div>
+        
+        <button
+          onClick={() => onPageChange(currentPage + 1)}
+          disabled={!hasNext}
+          className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-all flex items-center gap-1 ${
+            hasNext 
+              ? 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300'
+              : 'bg-slate-50 border border-slate-100 text-slate-300 cursor-not-allowed'
+          }`}
+        >
+          Próximo
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function Tickets() {
   const navigate = useNavigate();
   const [tickets, setTickets] = useState<Ticket[]>([]);
@@ -65,21 +178,50 @@ export default function Tickets() {
   const [filter, setFilter] = useState<FilterType>('todos');
   const [searchTerm, setSearchTerm] = useState('');
   const email = localStorage.getItem('email') || '';
+  
+  // Paginação states
+  const [currentPage, setCurrentPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalTickets, setTotalTickets] = useState(0);
+  const [hasNext, setHasNext] = useState(false);
+  const [hasPrev, setHasPrev] = useState(false);
+  const [paginationEnabled, setPaginationEnabled] = useState(false);
 
   useEffect(() => {
-    if (!localStorage.getItem('token')) {
+    const token = localStorage.getItem('token');
+    if (!token) {
       navigate('/');
       return;
     }
-    fetchTickets();
+    fetchTickets(0);
   }, []);
 
-  const fetchTickets = async () => {
+  const fetchTickets = async (page: number = 0) => {
     try {
-      const response = await api.get('/api/tickets');
-      setTickets(response.data.tickets);
+      setLoading(true);
+      // Tenta usar paginação do backend
+      const response = await api.get(`/api/tickets?page=${page}&size=10`);
+      
+      if (response.data.tickets) {
+        setTickets(response.data.tickets);
+        setTotalPages(response.data.totalPages || 0);
+        setTotalTickets(response.data.total || 0);
+        setHasNext(response.data.hasNext || false);
+        setHasPrev(response.data.hasPrev || false);
+        setCurrentPage(response.data.page || 0);
+        setPaginationEnabled(true);
+      }
     } catch (err: any) {
-      setError(err.response?.data || 'Erro ao carregar tickets.');
+      // Se paginação não existir no backend, busca tudo e faz frontend pagination
+      try {
+        const fallbackResponse = await api.get('/api/tickets');
+        setTickets(fallbackResponse.data.tickets || []);
+        setTotalTickets(fallbackResponse.data.tickets?.length || 0);
+        setTotalPages(Math.ceil((fallbackResponse.data.tickets?.length || 0) / 10));
+        setPaginationEnabled(false);
+      } catch (fallbackErr: any) {
+        setError(fallbackErr.response?.data || 'Erro ao carregar tickets.');
+      }
     } finally {
       setLoading(false);
     }
@@ -91,7 +233,7 @@ export default function Tickets() {
     navigate('/');
   };
 
-  // Filtro melhorado com prioridades
+  // Filtros (aplicado nos tickets carregados)
   const filteredTickets = tickets.filter((t) => {
     switch (filter) {
       case 'alta':
@@ -112,6 +254,11 @@ export default function Tickets() {
     (t.content && t.content.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
+  // Paginação frontend (se backend não suportar)
+  const paginatedTickets = paginationEnabled 
+    ? filteredTickets 
+    : filteredTickets.slice(currentPage * 10, (currentPage + 1) * 10);
+
   const stats = {
     total: tickets.length,
     abertos: tickets.filter(t => t.status === '1').length,
@@ -121,10 +268,17 @@ export default function Tickets() {
     resolvidos: tickets.filter(t => t.status === '3' || t.status === '4').length,
   };
 
+  const handlePageChange = (newPage: number) => {
+    if (paginationEnabled) {
+      fetchTickets(newPage);
+    } else {
+      setCurrentPage(newPage);
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50">
-      
-      {/* Header estilo Trello */}
+    <div className="min-h-screen bg-zinc-400 from-slate-50 via-white to-slate-50">
       <header className="bg-white/80 backdrop-blur-sm border-b border-slate-200 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
@@ -139,9 +293,7 @@ export default function Tickets() {
                 <p className="text-xs text-slate-400">Gerencie suas solicitações</p>
               </div>
             </div>
-            
             <div className="flex items-center gap-4">
-              {/* Stats mini */}
               <div className="hidden md:flex items-center gap-3 text-xs">
                 <div className="flex items-center gap-1.5">
                   <div className="w-2 h-2 rounded-full bg-blue-500"></div>
@@ -181,7 +333,7 @@ export default function Tickets() {
         
         {/* Stats cards estilo Trello */}
         <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-8">
-          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-2xl font-bold text-slate-800">{stats.total}</p>
@@ -195,7 +347,7 @@ export default function Tickets() {
             </div>
           </div>
           
-          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-2xl font-bold text-blue-600">{stats.abertos}</p>
@@ -209,7 +361,7 @@ export default function Tickets() {
             </div>
           </div>
           
-          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-2xl font-bold text-red-600">{stats.alta}</p>
@@ -223,7 +375,7 @@ export default function Tickets() {
             </div>
           </div>
           
-          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-2xl font-bold text-amber-600">{stats.media}</p>
@@ -237,7 +389,7 @@ export default function Tickets() {
             </div>
           </div>
           
-          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-2xl font-bold text-emerald-600">{stats.baixa}</p>
@@ -251,7 +403,7 @@ export default function Tickets() {
             </div>
           </div>
           
-          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+          <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-2xl font-bold text-green-600">{stats.resolvidos}</p>
@@ -275,7 +427,7 @@ export default function Tickets() {
               </svg>
               <input
                 type="text"
-                placeholder="Buscar tickets..."
+                placeholder="Buscar tickets por título ou descrição..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
@@ -300,7 +452,7 @@ export default function Tickets() {
                     : 'border border-slate-200 text-slate-600 hover:bg-slate-50'
                 }`}
               >
-                Alta
+                🔴 Alta
               </button>
               <button
                 onClick={() => setFilter('media')}
@@ -310,7 +462,7 @@ export default function Tickets() {
                     : 'border border-slate-200 text-slate-600 hover:bg-slate-50'
                 }`}
               >
-                Média
+                🟡 Média
               </button>
               <button
                 onClick={() => setFilter('baixa')}
@@ -320,7 +472,7 @@ export default function Tickets() {
                     : 'border border-slate-200 text-slate-600 hover:bg-slate-50'
                 }`}
               >
-                Baixa
+                🟢 Baixa
               </button>
               <button
                 onClick={() => setFilter('aberto')}
@@ -330,7 +482,7 @@ export default function Tickets() {
                     : 'border border-slate-200 text-slate-600 hover:bg-slate-50'
                 }`}
               >
-                Em aberto
+                📋 Em aberto
               </button>
               <button
                 onClick={() => setFilter('resolvidos')}
@@ -340,7 +492,7 @@ export default function Tickets() {
                     : 'border border-slate-200 text-slate-600 hover:bg-slate-50'
                 }`}
               >
-                Resolvidos
+                ✅ Resolvidos
               </button>
             </div>
           </div>
@@ -366,78 +518,97 @@ export default function Tickets() {
 
         {/* Lista de tickets */}
         {!loading && !error && (
-          <div className="space-y-3">
-            {filteredTickets.length === 0 ? (
-              <div className="text-center py-20">
-                <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <svg className="w-8 h-8 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
+          <>
+            <div className="space-y-3">
+              {paginatedTickets.length === 0 ? (
+                <div className="text-center py-20">
+                  <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg className="w-8 h-8 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  </div>
+                  <p className="text-slate-400 text-sm">Nenhum ticket encontrado</p>
+                  <p className="text-xs text-slate-300 mt-1">Tente outros filtros ou busca</p>
                 </div>
-                <p className="text-slate-400 text-sm">Nenhum ticket encontrado</p>
-              </div>
-            ) : (
-              filteredTickets.map((ticket) => (
-                <div
-                  key={ticket.id}
-                  className="group bg-white rounded-xl border border-slate-200 p-5 hover:shadow-md hover:border-slate-300 transition-all duration-200 cursor-pointer"
-                >
-                  {/* ... resto do card igual ... */}
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-3 flex-wrap">
-                        <div className={`text-xs font-medium px-2 py-1 rounded-full border ${statusColor[ticket.status] || 'bg-gray-100'}`}>
-                          {statusLabel[ticket.status] || ticket.status || '—'}
+              ) : (
+                paginatedTickets.map((ticket) => (
+                  <div
+                    key={ticket.id}
+                    className="group bg-white rounded-xl border border-slate-200 p-5 hover:shadow-md hover:border-slate-300 transition-all duration-200 cursor-pointer"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1">
+                        {/* Header do ticket */}
+                        <div className="flex items-center gap-3 mb-3 flex-wrap">
+                          <div className={`text-xs font-medium px-2 py-1 rounded-full border ${statusColor[ticket.status] || 'bg-gray-100'}`}>
+                            {statusLabel[ticket.status] || ticket.status || '—'}
+                          </div>
+                          <div className={`text-xs font-medium px-2 py-1 rounded-full border ${priorityStyle[ticket.priority] || 'bg-gray-100 text-gray-600'}`}>
+                            {priorityLabel[ticket.priority] || ticket.priority || 'Normal'}
+                          </div>
+                          <div className="text-xs text-slate-400 flex items-center gap-1">
+                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            {formatDate(ticket.createdDate)}
+                          </div>
                         </div>
-                        <div className={`text-xs font-medium px-2 py-1 rounded-full border ${priorityStyle[ticket.priority] || 'bg-gray-100 text-gray-600'}`}>
-                          {priorityLabel[ticket.priority] || ticket.priority || 'Normal'}
-                        </div>
-                        <div className="text-xs text-slate-400 flex items-center gap-1">
-                          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                          </svg>
-                          {formatDate(ticket.createdDate)}
+                        
+                        {/* Título */}
+                        <h3 className="text-base font-semibold text-slate-800 mb-2">
+                          {ticket.subject || 'Ticket sem título'}
+                        </h3>
+                        
+                        {/* Descrição */}
+                        {ticket.content && (
+                          <p className="text-sm text-slate-500 mb-3 line-clamp-2">
+                            {ticket.content}
+                          </p>
+                        )}
+                        
+                        {/* Footer */}
+                        <div className="flex items-center gap-4 text-xs text-slate-400">
+                          <div className="flex items-center gap-1">
+                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                            </svg>
+                            Ticket #{ticket.id.slice(-6)}
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                            {formatDate(ticket.lastModified)}
+                          </div>
                         </div>
                       </div>
                       
-                      <h3 className="text-base font-semibold text-slate-800 mb-2">
-                        {ticket.subject || 'Ticket sem título'}
-                      </h3>
-                      
-                      {ticket.content && (
-                        <p className="text-sm text-slate-500 mb-3 line-clamp-2">
-                          {ticket.content}
-                        </p>
-                      )}
-                      
-                      <div className="flex items-center gap-4 text-xs text-slate-400">
-                        <div className="flex items-center gap-1">
-                          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      {/* Badge de ID */}
+                      <div className="hidden sm:block">
+                        <div className="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center group-hover:bg-indigo-100 transition-colors">
+                          <svg className="w-4 h-4 text-slate-400 group-hover:text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                           </svg>
-                          Ticket #{ticket.id.slice(-6)}
                         </div>
-                        <div className="flex items-center gap-1">
-                          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                          </svg>
-                          {formatDate(ticket.lastModified)}
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="hidden sm:block">
-                      <div className="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center group-hover:bg-indigo-100 transition-colors">
-                        <svg className="w-4 h-4 text-slate-400 group-hover:text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))
+                ))
+              )}
+            </div>
+            
+            {/* Paginação */}
+            {paginatedTickets.length > 0 && (
+              <Pagination 
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={totalTickets}
+                hasPrev={hasPrev}
+                hasNext={hasNext}
+                onPageChange={handlePageChange}
+              />
             )}
-          </div>
+          </>
         )}
       </main>
     </div>
