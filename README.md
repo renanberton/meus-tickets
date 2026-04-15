@@ -162,6 +162,8 @@ http://localhost:5173
 
 O usuário é criado automaticamente na primeira execução.
 
+---
+
 ## ⚠️ Problemas comuns
 
 - Banco não conecta → verificar usuário/senha
