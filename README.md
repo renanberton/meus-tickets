@@ -10,6 +10,59 @@ Aplicação web onde o usuário faz login e visualiza seus tickets de atendiment
 
 ---
 
+## 🧰 Tecnologias Utilizadas
+
+### 🔧 Backend
+- Java 17
+- Spring Boot 3
+- Spring Security
+- JWT (autenticação)
+- JPA / Hibernate
+- MySQL
+
+### 🎨 Frontend
+- React 18
+- TypeScript
+- TailwindCSS
+- Vite
+
+### 🐳 Infraestrutura
+- Docker
+- Docker Compose
+
+### 🔗 Integrações
+- HubSpot CRM API
+
+---
+
+## ✨ Funcionalidades
+
+### 🔐 Autenticação
+- Login com e-mail e senha
+- Geração de token JWT
+- Proteção de rotas no backend
+
+### 🎫 Gestão de Tickets
+- Listagem de tickets do usuário logado (via HubSpot)
+- Integração com contato baseado no e-mail
+- Exibição em formato de cards
+
+### 🔎 Filtros e Busca
+- Filtro por prioridade (Alta / Média / Baixa)
+- Filtro por status (Aberto / Resolvido)
+- Busca por título e descrição
+
+### 📄 Paginação
+- Paginação no backend e frontend
+- Melhor performance na listagem
+
+### 🎨 Interface
+- Layout responsivo (desktop/mobile)
+- Feedback de loading e erro
+- Dashboard com métricas básicas
+
+---
+
 ## 🚀 Como Executar o Projeto
 
 Você pode rodar de duas formas:
@@ -22,122 +75,68 @@ Você pode rodar de duas formas:
 # 🐳 Opção 1: Docker
 
 ## Instalar dependências
-
-Você precisa ter instalado:
-
 - Docker
 
----
+Clone o projeto:
 
-Clone o projeto, no terminal CMD digite:
 ```bash
-
 git clone https://github.com/renanberton/meus-tickets.git
-cd meus-tickets 
+cd meus-tickets
 
 cp .env.example .env
 ```
 
-Edite o arquivo .env com as credenciais enviadas por e-mail
+Preencha o arquivo `.env` com suas credenciais.
 
-Execute o comando:
+Execute:
+
 ```bash
-
 docker compose up -d --build
 ```
 
-
-E o Docker irá executar o projeto no Container
-
-Acesse para visualizar e usar o projeto:
+Acesse:
 - http://localhost:5173
 - http://localhost:8080
 
 ---
 
-# 💻 Opção 2: Execução Manual (passo a passo detalhado)
+# 💻 Opção 2: Execução Manual
 
-## 1. Instalar dependências
-
-Você precisa ter instalado:
-
+## Pré-requisitos
 - Java 17
 - Node.js 18+
 - MySQL 8
 
 ---
 
-## 2. Criar banco de dados
+## Instanciando o Banco de Dados
 
-Abra seu MySQL (Workbench, terminal, etc) e execute:
+Acesse seu MySql, faça login com usuário e senha descritos no .env e crie o banco com o comando:
 
 ```sql
 CREATE DATABASE meus_tickets;
 ```
 
-👉 Isso cria um banco vazio.  
-👉 **Não precisa criar tabelas manualmente** — o Spring Boot faz isso automaticamente.
+O Spring Boot criará as tabelas automaticamente.
 
 ---
 
-## 3. Configurar backend
+## Executando o Backend
 
-Entre na pasta do Backend:
+Entre na pasta do projeto e execute os comandos: 
 
 ```bash
 cd backend
-```
-
-Agora você precisa configurar a conexão com o banco.
-
-Você pode fazer isso de duas formas:
-
-### ✔️ Opção A (recomendado): variáveis de ambiente
-
-Crie um arquivo `.env` ou configure no sistema:
-
-```
-DB_URL=jdbc:mysql://localhost:3306/meus_tickets
-DB_USERNAME=root
-DB_PASSWORD=sua_senha
-JWT_SECRET=uma_chave_grande
-HUBSPOT_TOKEN=seu_token
-```
-
-E cole as credenciais enviadas separadamente por e-mail
-
----
-
-### ✔️ Opção B: application.properties
-
-Ou edite direto o arquivo:
-
-`backend/src/main/resources/application.properties`
-
-Exemplo:
-
-```
-spring.datasource.url=jdbc:mysql://localhost:3306/meus_tickets
-spring.datasource.username=root
-spring.datasource.password=sua_senha
-```
-
----
-
-## 4. Rodar backend
-
-```bash
 ./mvnw spring-boot:run
 ```
 
-Se deu certo:
-- API disponível em http://localhost:8080
+API estará disponível em:
+http://localhost:8080
 
 ---
 
-## 5. Rodar frontend
-
-Abra outro terminal:
+## Executando o Frontend
+Entre na pasta do projeto e execute os comandos:
 
 ```bash
 cd frontend
@@ -145,30 +144,30 @@ npm install
 npm run dev
 ```
 
-Acesse:
-- http://localhost:5173
+Aplicação disponível em:
+http://localhost:5173
 
 ---
 
+
+## 🔑 Credenciais de Login no App
+* Email	teste@exemplo.com
+* Senha	senha123
+
+O usuário é criado automaticamente na primeira execução.
+
 ## ⚠️ Problemas comuns
 
-### Erro de banco
-- Verifique se o MySQL está rodando
-- Confira usuário e senha
-- Veja se o banco `meus_tickets` existe
-
-### Porta ocupada
-- 8080 ou 5173 já em uso → feche outros projetos
-
-### HubSpot não funciona
-- Token inválido ou não configurado
+- Banco não conecta → verificar usuário/senha
+- Porta ocupada → verificar 8080 / 5173
+- HubSpot não retorna dados → conferir token
 
 ---
 
 ## 📌 Observações
 
-- O backend cria automaticamente as tabelas
-- Sem HUBSPOT_TOKEN válido, os tickets não aparecem
+- Necessário token válido do HubSpot
+- Tabelas são criadas automaticamente
 
 ---
 
