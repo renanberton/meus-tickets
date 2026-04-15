@@ -94,10 +94,12 @@ Execute:
 docker compose up -d --build
 ```
 
-Acesse:
-Front-End:
+## Acesse:
+
+### Front-End:
 - http://localhost:5173
-Back-End:
+
+### Back-End:
 - http://localhost:8080
 
 ---
@@ -113,7 +115,8 @@ Back-End:
 
 ## Instanciando o Banco de Dados
 
-Após instalar tudo:
+### Após instalar tudo:
+
 Acesse seu MySql, faça login com usuário e senha descritos no .env e crie o banco com o comando:
 
 ```sql
