@@ -21,7 +21,7 @@ Você pode rodar de duas formas:
 
 # 🐳 Opção 1: Docker
 
-## 1. Instalar dependências
+## Instalar dependências
 
 Você precisa ter instalado:
 
