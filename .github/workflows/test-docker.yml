@@ -1,5 +1,8 @@
 name: Test Docker Build
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 on:
   push:
     branches: [ "main" ]
@@ -14,11 +17,10 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Create .env file from secrets
+    - name: Create .env file
       run: |
         cp .env.example .env
-        sed -i "s/seu-token-aqui/${{ secrets.HUBSPOT_TOKEN }}/g" .env
-        sed -i "s/sua-chave-secreta-aqui/${{ secrets.JWT_SECRET }}/g" .env
+        echo "HUBSPOT_TOKEN=${{ secrets.HUBSPOT_TOKEN }}" >> .env
 
     - name: Build and run with Docker Compose
       run: docker compose up -d --build
@@ -26,12 +28,12 @@ jobs:
     - name: Wait for services
       run: sleep 30
 
-    - name: Test Backend API
-      run: curl --fail http://localhost:8080/api/tickets || true
-
     - name: Show logs if failed
       if: failure()
       run: docker compose logs
+
+    - name: Test Backend API
+      run: curl --fail http://localhost:8080/api/tickets || true
 
     - name: Shutdown services
       run: docker compose down
