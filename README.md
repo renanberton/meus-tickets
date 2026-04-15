@@ -77,7 +77,7 @@ Você pode rodar de duas formas:
 ## Instalar dependências
 - Docker
 
-Com o Docker instalado, clone o projeto:
+Com o Docker instalado e rodando, clone o projeto no CMD/terminal:
 
 ```bash
 git clone https://github.com/renanberton/meus-tickets.git
@@ -86,7 +86,7 @@ cd meus-tickets
 cp .env.example .env
 ```
 
-Preencha o arquivo `.env` com as credenciais enviadas.
+Preencha o arquivo `.env` com as credenciais recebidas junto ao teste.
 
 Execute:
 
@@ -180,7 +180,7 @@ O usuário é criado automaticamente na primeira execução.
 
 ## 📌 Observações
 
-- Necessário token válido do HubSpot
+- Necessário token válido do HubSpot que será enviado.
 - Tabelas são criadas automaticamente
 
 ---
