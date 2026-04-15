@@ -21,6 +21,14 @@ Você pode rodar de duas formas:
 
 # 🐳 Opção 1: Docker
 
+## 1. Instalar dependências
+
+Você precisa ter instalado:
+
+- Docker
+
+---
+
 Clone o projeto, no terminal CMD digite:
 ```bash
 
