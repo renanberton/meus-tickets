@@ -38,7 +38,7 @@ cd meus-tickets
 cp .env.example .env
 ```
 
-Edite arquivo .env com as credenciais enviadas por e-mail
+Edite o arquivo .env com as credenciais enviadas por e-mail
 
 Execute o comando:
 ```bash
