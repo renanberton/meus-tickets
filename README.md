@@ -77,7 +77,7 @@ Você pode rodar de duas formas:
 ## Instalar dependências
 - Docker
 
-Clone o projeto:
+Com o Docker instalado, clone o projeto:
 
 ```bash
 git clone https://github.com/renanberton/meus-tickets.git
@@ -86,7 +86,7 @@ cd meus-tickets
 cp .env.example .env
 ```
 
-Preencha o arquivo `.env` com suas credenciais.
+Preencha o arquivo `.env` com as credenciais enviadas.
 
 Execute:
 
@@ -95,7 +95,9 @@ docker compose up -d --build
 ```
 
 Acesse:
+Front-End:
 - http://localhost:5173
+Back-End:
 - http://localhost:8080
 
 ---
@@ -111,6 +113,7 @@ Acesse:
 
 ## Instanciando o Banco de Dados
 
+Após instalar tudo:
 Acesse seu MySql, faça login com usuário e senha descritos no .env e crie o banco com o comando:
 
 ```sql
