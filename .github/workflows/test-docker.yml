@@ -14,11 +14,11 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Create .env file
+    - name: Create .env file from secrets
       run: |
         cp .env.example .env
-        # Substitua pelo token real para teste (ou use secrets)
-        sed -i 's/seu-token-aqui/pat-na1-xxxxxxxx/g' .env
+        sed -i "s/seu-token-aqui/${{ secrets.HUBSPOT_TOKEN }}/g" .env
+        sed -i "s/sua-chave-secreta-aqui/${{ secrets.JWT_SECRET }}/g" .env
 
     - name: Build and run with Docker Compose
       run: docker compose up -d --build
