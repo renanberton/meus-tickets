@@ -104,40 +104,46 @@ docker compose up -d --build
 
 ---
 
-# 💻 Opção 2: Execução Manual
+# Opção 2: Execução Manual
 
-## Pré-requisitos
+Pré-requisitos instalados:
 - Java 17
 - Node.js 18+
 - MySQL 8
 
----
 
-## Instanciando o Banco de Dados
+### 1. Iniciar o MySQL
 
-### Após instalar tudo:
+Abra seu MySQL (Workbench, XAMPP, terminal, etc) e garanta que ele está rodando.
 
-Acesse seu MySql, faça login com usuário e senha descritos no .env e crie o banco com o comando:
+### 2. Criar o banco de dados
 
-```sql
+Faça login com seu usuário (ex: root) e execute:
+
+```bash 
 CREATE DATABASE meus_tickets;
 ```
 
-O Spring Boot criará as tabelas automaticamente.
+O Spring Boot criará as tabelas automaticamente ao iniciar.
 
----
+### 3. Configurar conexão com o banco
 
-## Executando o Backend
+No arquivo .env, preencha com suas credenciais locais:
 
-Entre na pasta do projeto e execute os comandos: 
-
-```bash
-cd backend
-./mvnw spring-boot:run
+```bash 
+DB_URL=jdbc:mysql://localhost:3306/meus_tickets 
+DB_USERNAME=seu_usuario_mysql
+DB_PASSWORD=sua_senha_mysql
+JWT_SECRET=sua_chave
+HUBSPOT_TOKEN=seu_token
 ```
 
-API estará disponível em:
-http://localhost:8080
+### 4. Executar o Backend
+cd backend
+./mvnw spring-boot:run
+
+API disponível em: http://localhost:8080
+
 
 ---
 
