@@ -41,7 +41,11 @@ cp .env.example .env
 Edite arquivo .env com as credenciais enviadas por e-mail
 
 Execute o comando:
+```bash
+
 docker compose up -d --build
+```
+
 
 E o Docker irá executar o projeto no Container
 
